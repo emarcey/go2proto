@@ -29,6 +29,7 @@ func (i *arrFlags) Set(value string) error {
 
 var (
 	filter      = flag.String("filter", "", "Filter struct names.")
+	regexFilter = flag.String("r", "", "Regex include path")
 	protoFolder = flag.String("f", "", "Proto output path.")
 	pkgFlags    arrFlags
 )
@@ -46,6 +47,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	regexFilterCompiled, err := regexp.Compile(regexFilter)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -56,7 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	msgs := getMessages(pkgs, *filter)
+	msgs := getMessages(pkgs, *filter, regexFilterCompiled)
 
 	if err := writeOutput(msgs, *protoFolder); err != nil {
 		log.Fatal(err)
@@ -90,7 +96,7 @@ type field struct {
 	IsRepeated bool
 }
 
-func getMessages(pkgs []*packages.Package, filter string) []*message {
+func getMessages(pkgs []*packages.Package, filter string, regexFilterCompiled *regexp.Regexp) []*message {
 	var out []*message
 	seen := map[string]struct{}{}
 	for _, p := range pkgs {
@@ -106,7 +112,7 @@ func getMessages(pkgs []*packages.Package, filter string) []*message {
 			}
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
-				if filter == "" || strings.Contains(t.Name(), filter) {
+				if filter == "" || !regexFilterCompiled.MatchString(t.Name()) || strings.Contains(t.Name(), filter) {
 					out = appendMessage(out, t, s)
 				}
 			}

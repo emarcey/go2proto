@@ -2,7 +2,7 @@ package in
 
 type User struct{}
 
-type EventSubForm struct {
+type EventSubForm_t struct {
 	ID string
 
 	Caption string
