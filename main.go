@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -47,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	regexFilterCompiled, err := regexp.Compile(regexFilter)
+	regexFilterCompiled, err := regexp.Compile(*regexFilter)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func getMessages(pkgs []*packages.Package, filter string, regexFilterCompiled *r
 			}
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
-				if filter == "" || !regexFilterCompiled.MatchString(t.Name()) || strings.Contains(t.Name(), filter) {
+				if regexFilterCompiled.MatchString(t.Name()) && (filter == "" || strings.Contains(t.Name(), filter)) {
 					out = appendMessage(out, t, s)
 				}
 			}
