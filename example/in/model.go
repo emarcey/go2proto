@@ -38,6 +38,8 @@ type EventField struct {
 	Items *ArrayOfEventFieldItem
 
 	CustomFieldOrder int32
+
+	FieldDoesntExist string `elasticsearch:"no_source"`
 }
 
 type ArrayOfEventFieldItem struct {

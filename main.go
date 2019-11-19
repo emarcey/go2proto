@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -30,7 +29,6 @@ func (i *arrFlags) Set(value string) error {
 
 var (
 	filter      = flag.String("filter", "", "Filter struct names.")
-	regexFilter = flag.String("r", "", "Regex include path")
 	protoFolder = flag.String("f", "", "Proto output path.")
 	pkgFlags    arrFlags
 )
@@ -48,11 +46,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	regexFilterCompiled, err := regexp.Compile(*regexFilter)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -63,7 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	msgs := getMessages(pkgs, *filter, regexFilterCompiled)
+	msgs := getMessages(pkgs, *filter)
 
 	if err := writeOutput(msgs, *protoFolder); err != nil {
 		log.Fatal(err)
@@ -98,7 +91,7 @@ type field struct {
 	Tags       string
 }
 
-func getMessages(pkgs []*packages.Package, filter string, regexFilterCompiled *regexp.Regexp) []*message {
+func getMessages(pkgs []*packages.Package, filter string) []*message {
 	var out []*message
 	seen := map[string]struct{}{}
 	for _, p := range pkgs {
@@ -114,7 +107,7 @@ func getMessages(pkgs []*packages.Package, filter string, regexFilterCompiled *r
 			}
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
-				if regexFilterCompiled.MatchString(t.Name()) && (filter == "" || strings.Contains(t.Name(), filter)) {
+				if filter == "" || strings.Contains(t.Name(), filter) {
 					out = appendMessage(out, t, s)
 				}
 			}
@@ -132,7 +125,7 @@ func appendMessage(out []*message, t types.Object, s *types.Struct) []*message {
 
 	for i := 0; i < s.NumFields(); i++ {
 		f := s.Field(i)
-		if !f.Exported() {
+		if !f.Exported() || isElasticsearchNoSource(s.Tag(i)) {
 			continue
 		}
 		newField := &field{
@@ -187,6 +180,27 @@ func normalizeType(name string) string {
 	default:
 		return name
 	}
+}
+
+func isElasticsearchNoSource(tagString string) bool {
+	if tagString == "" {
+		return false
+	}
+
+	tags := strings.Split(tagString, " ")
+	for _, tag := range tags {
+		tagSplit := strings.Split(tag, ":")
+		if len(tagSplit) != 2 || tagSplit[0] != "elasticsearch" {
+			continue
+		}
+		cleanTag := strings.Trim(tagSplit[1], "\"")
+		for _, val := range strings.Split(cleanTag, ",") {
+			if val == "no_source" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func isRepeated(f *types.Var) bool {
