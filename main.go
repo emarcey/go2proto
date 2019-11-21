@@ -80,7 +80,7 @@ func loadPackages(pwd string, pkgs []string) ([]*packages.Package, error) {
 
 type message struct {
 	Name   string
-	Fields []*field
+	Fields []field
 }
 
 type field struct {
@@ -89,11 +89,13 @@ type field struct {
 	Order      int
 	IsRepeated bool
 	Tags       string
+	IsEmbedded bool
 }
 
-func getMessages(pkgs []*packages.Package, filter string) []*message {
-	var out []*message
+func getMessages(pkgs []*packages.Package, filter string) []message {
 	seen := map[string]struct{}{}
+
+	messageMap := make(map[string]message)
 	for _, p := range pkgs {
 		for _, t := range p.TypesInfo.Defs {
 			if t == nil {
@@ -108,19 +110,27 @@ func getMessages(pkgs []*packages.Package, filter string) []*message {
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
 				if filter == "" || strings.Contains(t.Name(), filter) {
-					out = appendMessage(out, t, s)
+					messageMap[t.Name()] = getMessage(t, s)
 				}
 			}
 		}
 	}
+
+	var out []message
+
+	for _, msg := range messageMap {
+		msg.Fields = resolveEmbedded(msg.Fields, messageMap)
+		out = append(out, msg)
+	}
+
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
-func appendMessage(out []*message, t types.Object, s *types.Struct) []*message {
-	msg := &message{
+func getMessage(t types.Object, s *types.Struct) message {
+	msg := message{
 		Name:   t.Name(),
-		Fields: []*field{},
+		Fields: []field{},
 	}
 
 	for i := 0; i < s.NumFields(); i++ {
@@ -128,17 +138,41 @@ func appendMessage(out []*message, t types.Object, s *types.Struct) []*message {
 		if !f.Exported() || isElasticsearchNoSource(s.Tag(i)) {
 			continue
 		}
-		newField := &field{
+
+		newField := field{
 			Name:       toProtoFieldName(f.Name()),
 			TypeName:   toProtoFieldTypeName(f),
 			IsRepeated: isRepeated(f),
 			Order:      i + 1,
 			Tags:       s.Tag(i),
+			IsEmbedded: f.Embedded(),
 		}
 		msg.Fields = append(msg.Fields, newField)
 	}
-	out = append(out, msg)
-	return out
+	return msg
+}
+
+func resolveEmbedded(msgFields []field, messageMap map[string]message) []field {
+	var newFields []field
+	orderNum := 1
+	for _, field := range msgFields {
+		if !field.IsEmbedded {
+			field.Order = orderNum
+			newFields = append(newFields, field)
+			orderNum++
+			continue
+		}
+		embeddedMsg := messageMap[field.TypeName]
+		embeddedFields := resolveEmbedded(embeddedMsg.Fields, messageMap)
+
+		for _, embeddedField := range embeddedFields {
+			embeddedField.Order = orderNum
+			newFields = append(newFields, embeddedField)
+			orderNum++
+		}
+
+	}
+	return newFields
 }
 
 func toProtoFieldTypeName(f *types.Var) string {
@@ -224,7 +258,7 @@ var FUNC_MAP = template.FuncMap{
 	"escapeQuotes": escapeQuotes,
 }
 
-func writeOutput(msgs []*message, path string) error {
+func writeOutput(msgs []message, path string) error {
 	msgTemplate := `syntax = "proto3";
 package proto;
 
