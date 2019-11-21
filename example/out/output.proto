@@ -12,6 +12,15 @@ message ArrayOfEventFieldItem {
   repeated EventFieldItem eventFieldItem = 1;
 }
 
+message DoubleEmbeddedStruct {
+  int32 idDoubleEmbedded = 1;
+}
+
+message EmbeddedStruct {
+  int32 idDoubleEmbedded = 1;
+  int32 idEmbedded = 2;
+}
+
 message EventField {
   string id = 1 [(tagger.tags) = "json:\"id\""]; 
   string name = 2;
@@ -21,6 +30,8 @@ message EventField {
   string tag = 6;
   ArrayOfEventFieldItem items = 7;
   int32 customFieldOrder = 8;
+  int32 idDoubleEmbedded = 9;
+  int32 idEmbedded = 10;
 }
 
 message EventFieldItem {

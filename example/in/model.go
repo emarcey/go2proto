@@ -40,6 +40,17 @@ type EventField struct {
 	CustomFieldOrder int32
 
 	FieldDoesntExist string `elasticsearch:"no_source"`
+
+	EmbeddedStruct
+}
+
+type EmbeddedStruct struct {
+	DoubleEmbeddedStruct
+	IdEmbedded int32
+}
+
+type DoubleEmbeddedStruct struct {
+	IdDoubleEmbedded int32
 }
 
 type ArrayOfEventFieldItem struct {
