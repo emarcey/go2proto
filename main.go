@@ -265,6 +265,7 @@ package proto;
 import "tagger/tagger.proto";
 
 {{range .}}
+//easyjson:json
 message {{.Name}} {
 {{- range .Fields}}
 {{- if .IsRepeated}}
