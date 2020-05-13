@@ -1,0 +1,82 @@
+syntax = "proto3";
+package proto;
+
+import "tagger/tagger.proto";
+
+
+//easyjson:json
+message ArrayOfEventField {
+  repeated EventField eventField = 1;
+}
+
+//easyjson:json
+message ArrayOfEventFieldItem {
+  repeated EventFieldItem eventFieldItem = 1;
+}
+
+//easyjson:json
+message DoubleEmbeddedStruct {
+  int32 idDoubleEmbedded = 1;
+}
+
+//easyjson:json
+message EmbeddedEntity {
+  string embeddedEntityID = 1;
+}
+
+//easyjson:json
+message EmbeddedStruct {
+  int32 idDoubleEmbedded = 1;
+  int32 idEmbedded = 2;
+}
+
+//easyjson:json
+message Entity {
+  string entityID = 1;
+  string embeddedEntityID = 2;
+  repeated SubEntity subEntities = 3;
+}
+
+//easyjson:json
+message EventField {
+  string id = 1 [(tagger.tags) = "json:\"id\""]; 
+  string name = 2;
+  string fieldType = 3;
+  bool isMandatory = 4;
+  int32 rank = 5;
+  string tag = 6;
+  ArrayOfEventFieldItem items = 7;
+  int32 customFieldOrder = 8;
+  int32 idDoubleEmbedded = 9;
+  int32 idEmbedded = 10;
+}
+
+//easyjson:json
+message EventFieldItem {
+  string eventFieldItemID = 1;
+  string text = 2;
+  int32 rank = 3;
+  float floatField1 = 4;
+  double floatField2 = 5;
+}
+
+//easyjson:json
+message EventSubForm {
+  string id = 1;
+  string caption = 2;
+  int32 rank = 3;
+  ArrayOfEventField fields = 4;
+  User user = 5;
+  int64 primitivePointer = 6;
+  repeated int64 sliceInt = 7;
+}
+
+//easyjson:json
+message SubEntity {
+  string subEntityID = 1;
+}
+
+//easyjson:json
+message User {
+}
+

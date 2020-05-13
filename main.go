@@ -28,9 +28,10 @@ func (i *arrFlags) Set(value string) error {
 }
 
 var (
-	filter      = flag.String("filter", "", "Filter struct names.")
-	protoFolder = flag.String("f", "", "Proto output path.")
-	pkgFlags    arrFlags
+	filter            = flag.String("filter", "", "Filter struct names.")
+	protoFolder       = flag.String("f", "", "Proto output path.")
+	currProtoFileName = flag.String("c", "", "Full filepath for existing version of proto, if applicable.")
+	pkgFlags          arrFlags
 )
 
 func main() {
@@ -46,6 +47,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	currProtoMessages, err := BuildCurrentProtoMap(*currProtoFileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -56,7 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	msgs := getMessages(pkgs, *filter)
+	msgs := getMessages(pkgs, *filter, currProtoMessages)
 
 	if err := writeOutput(msgs, *protoFolder); err != nil {
 		log.Fatal(err)
@@ -92,7 +98,7 @@ type field struct {
 	IsEmbedded bool
 }
 
-func getMessages(pkgs []*packages.Package, filter string) []message {
+func getMessages(pkgs []*packages.Package, filter string, currProtoMessages ProtoMessageMap) []message {
 	seen := map[string]struct{}{}
 
 	messageMap := make(map[string]message)
@@ -110,7 +116,7 @@ func getMessages(pkgs []*packages.Package, filter string) []message {
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
 				if filter == "" || strings.Contains(t.Name(), filter) {
-					messageMap[t.Name()] = getMessage(t, s)
+					messageMap[t.Name()] = getMessage(t, s, currProtoMessages)
 				}
 			}
 		}
@@ -119,7 +125,7 @@ func getMessages(pkgs []*packages.Package, filter string) []message {
 	var out []message
 
 	for _, msg := range messageMap {
-		msg.Fields = resolveEmbedded(msg.Fields, messageMap)
+		msg.Fields = resolveEmbedded(msg.Fields, messageMap, currProtoMessages, msg.Name)
 		out = append(out, msg)
 	}
 
@@ -127,7 +133,7 @@ func getMessages(pkgs []*packages.Package, filter string) []message {
 	return out
 }
 
-func getMessage(t types.Object, s *types.Struct) message {
+func getMessage(t types.Object, s *types.Struct, currProtoMessages ProtoMessageMap) message {
 	msg := message{
 		Name:   t.Name(),
 		Fields: []field{},
@@ -138,12 +144,13 @@ func getMessage(t types.Object, s *types.Struct) message {
 		if !f.Exported() || isElasticsearchNoSource(s.Tag(i)) {
 			continue
 		}
-
+		fieldName := toProtoFieldName(f.Name())
+		order := currProtoMessages.GetFieldNum(t.Name(), fieldName)
 		newField := field{
-			Name:       toProtoFieldName(f.Name()),
+			Name:       fieldName,
 			TypeName:   toProtoFieldTypeName(f),
 			IsRepeated: isRepeated(f),
-			Order:      i + 1,
+			Order:      int(order),
 			Tags:       s.Tag(i),
 			IsEmbedded: f.Embedded(),
 		}
@@ -152,23 +159,22 @@ func getMessage(t types.Object, s *types.Struct) message {
 	return msg
 }
 
-func resolveEmbedded(msgFields []field, messageMap map[string]message) []field {
+func resolveEmbedded(msgFields []field, messageMap map[string]message, currProtoMessages ProtoMessageMap, msgName string) []field {
 	var newFields []field
-	orderNum := 1
 	for _, field := range msgFields {
 		if !field.IsEmbedded {
-			field.Order = orderNum
+			order := currProtoMessages.GetFieldNum(msgName, field.Name)
+			field.Order = int(order)
 			newFields = append(newFields, field)
-			orderNum++
 			continue
 		}
 		embeddedMsg := messageMap[field.TypeName]
-		embeddedFields := resolveEmbedded(embeddedMsg.Fields, messageMap)
+		embeddedFields := resolveEmbedded(embeddedMsg.Fields, messageMap, currProtoMessages, msgName)
 
 		for _, embeddedField := range embeddedFields {
-			embeddedField.Order = orderNum
+			order := currProtoMessages.GetFieldNum(msgName, field.Name)
+			embeddedField.Order = int(order)
 			newFields = append(newFields, embeddedField)
-			orderNum++
 		}
 
 	}

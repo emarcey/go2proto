@@ -67,3 +67,17 @@ type EventFieldItem struct {
 	FloatField1 float32
 	FloatField2 float64
 }
+
+type Entity struct {
+	EntityID string
+	EmbeddedEntity
+	SubEntities []SubEntity
+}
+
+type EmbeddedEntity struct {
+	EmbeddedEntityID string
+}
+
+type SubEntity struct {
+	SubEntityID string
+}
