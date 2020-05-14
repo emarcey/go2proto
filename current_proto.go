@@ -12,7 +12,10 @@ func BuildCurrentProtoMap(filename string) (ProtoMessageMap, error) {
 	if filename == "" {
 		return ProtoMessageMap{}, nil
 	}
-	reader, _ := os.Open(filename)
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
 	defer reader.Close()
 
 	parser := proto.NewParser(reader)
