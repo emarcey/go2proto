@@ -91,7 +91,7 @@ func (p *ProtoMessage) GetFieldNum(fieldName string) int {
 	if ok {
 		return p.fields[fieldName]
 	}
-
+	// assumes fields are dropped in order
 	if len(p.droppedNums) == 0 {
 		p.currMaxNum++
 		p.fields[fieldName] = p.currMaxNum
@@ -107,6 +107,7 @@ func (p *ProtoMessage) RemoveFieldNum(fieldName string) {
 	if p.fields == nil {
 		return
 	}
+	// assumes fields are dropped in order
 	_, ok := p.fields[fieldName]
 	if !ok {
 		return
