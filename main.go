@@ -168,11 +168,13 @@ func resolveEmbedded(msgFields []field, messageMap map[string]message, currProto
 			newFields = append(newFields, field)
 			continue
 		}
+		currProtoMessages.RemoveFieldNum(msgName, field.Name)
+
 		embeddedMsg := messageMap[field.TypeName]
-		embeddedFields := resolveEmbedded(embeddedMsg.Fields, messageMap, currProtoMessages, msgName)
+		embeddedFields := resolveEmbedded(embeddedMsg.Fields, messageMap, currProtoMessages, embeddedMsg.Name)
 
 		for _, embeddedField := range embeddedFields {
-			order := currProtoMessages.GetFieldNum(msgName, field.Name)
+			order := currProtoMessages.GetFieldNum(msgName, embeddedField.Name)
 			embeddedField.Order = int(order)
 			newFields = append(newFields, embeddedField)
 		}

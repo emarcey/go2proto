@@ -26,6 +26,7 @@ message EmbeddedEntity {
 
 //easyjson:json
 message EmbeddedStruct {
+  int32 newEmbeddedField = 3;
   int32 idDoubleEmbedded = 1;
   int32 idEmbedded = 2;
 }
@@ -47,8 +48,10 @@ message EventField {
   string tag = 6;
   ArrayOfEventFieldItem items = 7;
   int32 customFieldOrder = 8;
+  int32 newField = 11;
+  int32 newEmbeddedField = 12;
   int32 idDoubleEmbedded = 9;
-  int32 idEmbedded = 9;
+  int32 idEmbedded = 10;
 }
 
 //easyjson:json
@@ -78,5 +81,6 @@ message SubEntity {
 
 //easyjson:json
 message User {
+  int32 idUser = 1;
 }
 

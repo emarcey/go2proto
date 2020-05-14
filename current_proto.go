@@ -1,107 +1,80 @@
 package main
 
 import (
-	"fmt"
-	// "io/ioutil"
 	"os"
 
-	eproto "github.com/emicklei/proto"
-
-	// "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/descriptorpb"
-	// "google.golang.org/protobuf/types/pluginpb"
+	"github.com/emicklei/proto"
 )
-
-func BuildCurrentProtoMap(filename string) (ProtoMessageMap, error) {
-	if filename == "" {
-		return make(ProtoMessageMap), nil
-	}
-	descriptor, err := ReadCurrentProto(filename)
-	if err != nil {
-		return nil, err
-	}
-	return NewProtoMessageMapFromDescriptor(descriptor), nil
-}
-
-func ReadCurrentProto(filename string) (*descriptorpb.FileDescriptorProto, error) {
-
-	reader, _ := os.Open(filename)
-	defer reader.Close()
-
-	parser := eproto.NewParser(reader)
-	definition, _ := parser.Parse()
-
-	p := make(ProtoMessageMap)
-	eproto.Walk(definition,
-		eproto.WithMessage(p.HandleMessage()))
-
-	return &descriptorpb.FileDescriptorProto{}, nil
-	// 	fmt.Printf("protoBytes: %v\n", string(protoBytes))
-	// 	req := &pluginpb.CodeGeneratorRequest{}
-	// 	err = proto.Unmarshal(protoBytes, req)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if len(req.ProtoFile) != 1 {
-	// 		return nil, fmt.Errorf("Invalid number of proto files. Expected 1. Got: %+v\n", req.ProtoFile)
-	// 	}
-	// 	return req.ProtoFile[0], nil
-}
-
-func handleService(s *eproto.Service) {
-	fmt.Println(s.Name)
-}
-
-func (p *ProtoMessageMap) HandleMessage() func(m *eproto.Message) {
-	return func(m *eproto.Message) {
-
-
-		fmt.Printf("Message name: %v\n", m.Name)
-		fmt.Printf("Elements: %+v\n", m.Elements)
-	}
-}
-func handleMessage(m *eproto.Message) {
-
-}
 
 type ProtoMessageMap map[string]*ProtoMessage
 
-func NewProtoMessageMapFromDescriptor(descriptor *descriptorpb.FileDescriptorProto) ProtoMessageMap {
-	protoMessageMap := make(ProtoMessageMap, len(descriptor.MessageType))
-
-	for i, _ := range descriptor.MessageType {
-		message := descriptor.MessageType[i]
-		protoMessageMap[message.GetName()] = NewProtoMesssageFromDescriptor(message)
+func BuildCurrentProtoMap(filename string) (ProtoMessageMap, error) {
+	if filename == "" {
+		return ProtoMessageMap{}, nil
 	}
-	return protoMessageMap
+	reader, _ := os.Open(filename)
+	defer reader.Close()
+
+	parser := proto.NewParser(reader)
+	definition, _ := parser.Parse()
+
+	p := make(ProtoMessageMap)
+	proto.Walk(definition, proto.WithMessage(p.HandleMessage()))
+
+	return p, nil
 }
 
-func (p *ProtoMessageMap) GetFieldNum(messageName, fieldName string) int32 {
-	tempP := *p
-	_, ok := tempP[messageName]
-	if !ok {
-		tempP[messageName] = NewProtoMesssageFromDescriptor(&descriptorpb.DescriptorProto{})
+func (p ProtoMessageMap) HandleMessage() func(m *proto.Message) {
+	return func(m *proto.Message) {
+		p[m.Name] = NewProtoMesssageFromMessage(m)
 	}
-	fieldNum := tempP[messageName].GetFieldNum(fieldName)
-	p = &tempP
+}
+
+func (p ProtoMessageMap) GetFieldNum(messageName, fieldName string) int {
+	_, ok := p[messageName]
+	if !ok {
+		p[messageName] = &ProtoMessage{}
+	}
+	fieldNum := p[messageName].GetFieldNum(fieldName)
 	return fieldNum
 }
 
-type ProtoMessage struct {
-	currMaxNum int32
-	fields     map[string]int32
+func (p ProtoMessageMap) RemoveFieldNum(messageName, fieldName string) {
+	_, ok := p[messageName]
+	if !ok {
+		return
+	}
+	p[messageName].RemoveFieldNum(fieldName)
+	return
 }
 
-func NewProtoMesssageFromMessage(msg *eproto.Message) *ProtoMessage {
-	fieldsMap := make(map[string]int32, len(msg.))
-	var currMax int32
+type ProtoMessage struct {
+	currMaxNum  int
+	droppedNums []int
+	fields      map[string]int
+}
 
-	for i, _ := range descriptor.Field {
-		descriptorField := descriptor.Field[i]
+func NewProtoMesssageFromMessage(msg *proto.Message) *ProtoMessage {
+	fieldsMap := make(map[string]int, len(msg.Elements))
+	currMax := 0
 
-		fieldsMap[descriptorField.GetName()] = descriptorField.GetNumber()
-		if descriptorField.GetNumber() > currMax {
-			currMax = descriptorField.GetNumber()
+	for i, _ := range msg.Elements {
+		element := msg.Elements[i]
+
+		switch element.(type) {
+		case *proto.NormalField:
+			field := element.(*proto.NormalField)
+			fieldsMap[field.Name] = field.Sequence
+			if field.Sequence > currMax {
+				currMax = field.Sequence
+			}
+		case *proto.MapField:
+			field := element.(*proto.MapField)
+			fieldsMap[field.Name] = field.Sequence
+			if field.Sequence > currMax {
+				currMax = field.Sequence
+			}
+		default:
 		}
 	}
 	return &ProtoMessage{
@@ -110,13 +83,35 @@ func NewProtoMesssageFromMessage(msg *eproto.Message) *ProtoMessage {
 	}
 }
 
-func (p *ProtoMessage) GetFieldNum(fieldName string) int32 {
+func (p *ProtoMessage) GetFieldNum(fieldName string) int {
+	if p.fields == nil {
+		p.fields = make(map[string]int)
+	}
 	_, ok := p.fields[fieldName]
-	if !ok {
-		p.currMaxNum++
-		p.fields[fieldName] = p.currMaxNum
-
+	if ok {
+		return p.fields[fieldName]
 	}
 
+	if len(p.droppedNums) == 0 {
+		p.currMaxNum++
+		p.fields[fieldName] = p.currMaxNum
+		return p.fields[fieldName]
+	}
+
+	p.fields[fieldName] = p.droppedNums[0]
+	p.droppedNums = p.droppedNums[1:]
 	return p.fields[fieldName]
+}
+
+func (p *ProtoMessage) RemoveFieldNum(fieldName string) {
+	if p.fields == nil {
+		return
+	}
+	_, ok := p.fields[fieldName]
+	if !ok {
+		return
+	}
+	p.droppedNums = append(p.droppedNums, p.fields[fieldName])
+	delete(p.fields, fieldName)
+	return
 }
