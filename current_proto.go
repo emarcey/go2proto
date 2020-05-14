@@ -19,7 +19,10 @@ func BuildCurrentProtoMap(filename string) (ProtoMessageMap, error) {
 	defer reader.Close()
 
 	parser := proto.NewParser(reader)
-	definition, _ := parser.Parse()
+	definition, err := parser.Parse()
+	if err != nil {
+		return nil, err
+	}
 
 	p := make(ProtoMessageMap)
 	proto.Walk(definition, proto.WithMessage(p.HandleMessage()))
