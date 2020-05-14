@@ -1,6 +1,8 @@
 package in
 
-type User struct{}
+type User struct {
+	IdUser int32
+}
 
 type EventSubForm struct {
 	ID string
@@ -39,12 +41,15 @@ type EventField struct {
 
 	CustomFieldOrder int32
 
-	FieldDoesntExist string `elasticsearch:"no_source"`
+	NewField int32
 
 	EmbeddedStruct
+
+	FieldDoesntExist string `elasticsearch:"no_source"`
 }
 
 type EmbeddedStruct struct {
+	NewEmbeddedField int32
 	DoubleEmbeddedStruct
 	IdEmbedded int32
 }
@@ -66,4 +71,18 @@ type EventFieldItem struct {
 
 	FloatField1 float32
 	FloatField2 float64
+}
+
+type Entity struct {
+	EntityID string
+	EmbeddedEntity
+	SubEntities []SubEntity
+}
+
+type EmbeddedEntity struct {
+	EmbeddedEntityID string
+}
+
+type SubEntity struct {
+	SubEntityID string
 }
