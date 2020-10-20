@@ -14,6 +14,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/tools/go/packages"
+
+	gostringconverters "github.com/emarcey/go-string-converters"
 )
 
 type arrFlags []string
@@ -28,10 +30,11 @@ func (i *arrFlags) Set(value string) error {
 }
 
 var (
-	filter            = flag.String("filter", "", "Filter struct names.")
-	protoFolder       = flag.String("f", "", "Proto output path.")
-	currProtoFileName = flag.String("c", "", "Full filepath for existing version of proto, if applicable.")
-	pkgFlags          arrFlags
+	filter             = flag.String("filter", "", "Filter struct names.")
+	protoFolder        = flag.String("f", "", "Proto output path.")
+	currProtoFileName  = flag.String("c", "", "Full filepath for existing version of proto, if applicable.")
+	useSnakeFieldNames = flag.Bool("s", false, "Use to set proto structs names to snake_case instead of camelCase.")
+	pkgFlags           arrFlags
 )
 
 func main() {
@@ -62,7 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	msgs := getMessages(pkgs, *filter, currProtoMessages)
+	msgs := getMessages(pkgs, *filter, currProtoMessages, *useSnakeFieldNames)
 
 	if err := writeOutput(msgs, *protoFolder); err != nil {
 		log.Fatal(err)
@@ -98,7 +101,7 @@ type field struct {
 	IsEmbedded bool
 }
 
-func getMessages(pkgs []*packages.Package, filter string, currProtoMessages ProtoMessageMap) []message {
+func getMessages(pkgs []*packages.Package, filter string, currProtoMessages ProtoMessageMap, useSnakeFieldNames bool) []message {
 	seen := map[string]struct{}{}
 
 	messageMap := make(map[string]message)
@@ -116,7 +119,7 @@ func getMessages(pkgs []*packages.Package, filter string, currProtoMessages Prot
 			if s, ok := t.Type().Underlying().(*types.Struct); ok {
 				seen[t.Name()] = struct{}{}
 				if filter == "" || strings.Contains(t.Name(), filter) {
-					messageMap[t.Name()] = getMessage(t, s, currProtoMessages)
+					messageMap[t.Name()] = getMessage(t, s, currProtoMessages, useSnakeFieldNames)
 				}
 			}
 		}
@@ -133,7 +136,7 @@ func getMessages(pkgs []*packages.Package, filter string, currProtoMessages Prot
 	return out
 }
 
-func getMessage(t types.Object, s *types.Struct, currProtoMessages ProtoMessageMap) message {
+func getMessage(t types.Object, s *types.Struct, currProtoMessages ProtoMessageMap, useSnakeFieldNames bool) message {
 	msg := message{
 		Name:   t.Name(),
 		Fields: []field{},
@@ -144,7 +147,7 @@ func getMessage(t types.Object, s *types.Struct, currProtoMessages ProtoMessageM
 		if !f.Exported() || isElasticsearchNoSource(s.Tag(i)) {
 			continue
 		}
-		fieldName := toProtoFieldName(f.Name())
+		fieldName := toProtoFieldName(f.Name(), useSnakeFieldNames)
 		order := currProtoMessages.GetFieldNum(t.Name(), fieldName)
 		newField := field{
 			Name:       fieldName,
@@ -250,12 +253,16 @@ func isRepeated(f *types.Var) bool {
 	return ok
 }
 
-func toProtoFieldName(name string) string {
+func toProtoFieldName(name string, useSnakeFieldNames bool) string {
 	if len(name) == 2 {
 		return strings.ToLower(name)
 	}
 	r, n := utf8.DecodeRuneInString(name)
-	return string(unicode.ToLower(r)) + name[n:]
+	val := string(unicode.ToLower(r)) + name[n:]
+	if useSnakeFieldNames {
+		return gostringconverters.SnakeCase(val)
+	}
+	return val
 }
 
 func escapeQuotes(tag string) string {

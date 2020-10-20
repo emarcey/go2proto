@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/emarcey/go-string-converters v0.0.0-20200625154128-657efe3eabab h1:ofIZvmCzF8toOGKQVHX6gIw7NxVIKBZ8D9el5BMjVFU=
+github.com/emarcey/go-string-converters v0.0.0-20200625154128-657efe3eabab/go.mod h1:aX0VEgnBVu+Lzu4AUf7PYZjPMRlvdT16qgHP/oqZ7nc=
 github.com/emicklei/proto v1.9.0 h1:l0QiNT6Qs7Yj0Mb4X6dnWBQer4ebei2BFcgQLbGqUDc=
 github.com/emicklei/proto v1.9.0/go.mod h1:rn1FgRS/FANiZdD2djyH7TMA9jdRDcYQ9IEN9yvjX0A=
 github.com/golang/protobuf v1.4.0-rc.1/go.mod h1:ceaxUfeHdC40wWswd/P6IGgMaK3YpKi5j83Wpe3EHw8=

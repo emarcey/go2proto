@@ -6,61 +6,61 @@ import "tagger/tagger.proto";
 
 //easyjson:json
 message ArrayOfEventField {
-  repeated EventField eventField = 1;
+  repeated EventField event_field = 1;
 }
 
 //easyjson:json
 message ArrayOfEventFieldItem {
-  repeated EventFieldItem eventFieldItem = 1;
+  repeated EventFieldItem event_field_item = 1;
 }
 
 //easyjson:json
 message DoubleEmbeddedStruct {
-  int32 idDoubleEmbedded = 1;
+  int32 id_double_embedded = 1;
 }
 
 //easyjson:json
 message EmbeddedEntity {
-  string embeddedEntityID = 1;
+  string embedded_entity_i_d = 1;
 }
 
 //easyjson:json
 message EmbeddedStruct {
-  int32 newEmbeddedField = 1;
-  int32 idDoubleEmbedded = 2;
-  int32 idEmbedded = 3;
+  int32 new_embedded_field = 1;
+  int32 id_double_embedded = 2;
+  int32 id_embedded = 3;
 }
 
 //easyjson:json
 message Entity {
-  string entityID = 1;
-  string embeddedEntityID = 2;
-  repeated SubEntity subEntities = 3;
+  string entity_i_d = 1;
+  string embedded_entity_i_d = 2;
+  repeated SubEntity sub_entities = 3;
 }
 
 //easyjson:json
 message EventField {
   string id = 1 [(tagger.tags) = "json:\"id\""]; 
   string name = 2;
-  string fieldType = 3;
-  bool isMandatory = 4;
+  string field_type = 3;
+  bool is_mandatory = 4;
   int32 rank = 5;
   string tag = 6;
   ArrayOfEventFieldItem items = 7;
-  int32 customFieldOrder = 8;
-  int32 newField = 9;
-  int32 newEmbeddedField = 10;
-  int32 idDoubleEmbedded = 11;
-  int32 idEmbedded = 12;
+  int32 custom_field_order = 8;
+  int32 new_field = 9;
+  int32 new_embedded_field = 10;
+  int32 id_double_embedded = 11;
+  int32 id_embedded = 12;
 }
 
 //easyjson:json
 message EventFieldItem {
-  string eventFieldItemID = 1;
+  string event_field_item_i_d = 1;
   string text = 2;
   int32 rank = 3;
-  float floatField1 = 4;
-  double floatField2 = 5;
+  float float_field1 = 4;
+  double float_field2 = 5;
 }
 
 //easyjson:json
@@ -70,17 +70,17 @@ message EventSubForm {
   int32 rank = 3;
   ArrayOfEventField fields = 4;
   User user = 5;
-  int64 primitivePointer = 6;
-  repeated int64 sliceInt = 7;
+  int64 primitive_pointer = 6;
+  repeated int64 slice_int = 7;
 }
 
 //easyjson:json
 message SubEntity {
-  string subEntityID = 1;
+  string sub_entity_i_d = 1;
 }
 
 //easyjson:json
 message User {
-  int32 idUser = 1;
+  int32 id_user = 1;
 }
 

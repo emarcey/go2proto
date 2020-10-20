@@ -1,5 +1,7 @@
 # github.com/davecgh/go-spew v1.1.0
 github.com/davecgh/go-spew/spew
+# github.com/emarcey/go-string-converters v0.0.0-20200625154128-657efe3eabab
+github.com/emarcey/go-string-converters
 # github.com/emicklei/proto v1.9.0
 github.com/emicklei/proto
 # github.com/pmezard/go-difflib v1.0.0
